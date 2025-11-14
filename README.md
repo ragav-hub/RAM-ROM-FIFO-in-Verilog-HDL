@@ -29,70 +29,104 @@ FIFO is a sequential buffer that stores data such that the **first data written 
 
 ### **1. RAM Module**
 ```verilog
-// 4x8 RAM with Read and Write Operations
-module ram_4x8 (
-    input clk,
-    input we,
-    input [1:0] addr,
-    input [7:0] data_in,
-    output reg [7:0] data_out
-);
-    reg [7:0] memory [3:0];
+module ram_4kb (clk,we,addr,din,dout);
+input clk;
+input we;
+input [11:0] addr;
+input [7:0] din;
+output reg [7:0] dout;
 
+reg [7:0] mem [0:4095];
+
+always @(posedge clk)
+begin
+    if (we)
+        mem[addr] <= din;
+    else
+        dout <= mem[addr];
+end
 endmodule
 ```
 ### Testbench for RAM
 ```
-module tb_ram_4x8;
-    reg clk, we;
-    reg [1:0] addr;
-    reg [7:0] data_in;
-    wire [7:0] data_out;
+`timescale 1ns/1ps
+module tb_ram_4kb;
 
-    ram_4x8 uut(clk, we, addr, data_in, data_out);
+reg clk;
+reg we;
+reg [11:0] addr;
+reg [7:0] din;
+wire [7:0] dout;
+integer i;
 
-    always #5 clk = ~clk;
+ram_4kb dut (clk,we,addr,din,dout);
 
-    initial begin
-        clk = 0; we = 0;
-        addr = 2'b00; data_in = 8'h00;
-        #10 we = 1; addr = 2'b00; data_in = 8'hA5; // Write A5 at addr 00
-        #10 addr = 2'b01; data_in = 8'h3C;         // Write 3C at addr 01
-        #10 we = 0; addr = 2'b00;                  // Read addr 00
-        #10 addr = 2'b01;                          // Read addr 01
-        #10 $finish;
+initial clk = 0;
+always #5 clk = ~clk;
+
+initial begin
+    we = 0;
+    addr = 0;
+    din = 0;
+    #10;
+    for (i = 0; i < 20; i = i + 1) begin
+        @(posedge clk);
+        addr = $random % 4096;
+        din  = $random % 256;
+        we   = 1;
+        @(posedge clk);
+        we   = 0;
     end
+    #20 $finish;
+end
 endmodule
+
 ```
 ### Simulation Output for RAM
-*
-*
-*
-*
-Paste the output here
-*
-*
+
+<img width="1044" height="659" alt="image" src="https://github.com/user-attachments/assets/1ced9e9c-9827-415f-9ff2-2d7eb95c052d" />
+
+
 ### 2. ROM Module
 ```
-// 4x8 ROM with Preloaded Data
-module rom_4x8 (
-    input [1:0] addr,
-    output reg [7:0] data_out
-);
-    reg [7:0] memory [3:0];
+module rom_4kb (addr,dout);
+input [11:0] addr;
+output reg [7:0] dout;
 
+reg [7:0] mem [0:4095];
+integer i;
 
+initial begin
+   for (i = 0; i < 4096; i = i + 1)
+       mem[i] = $random % 256;
+end
 
+always @(*) begin
+   dout = mem[addr];
+end
 endmodule
+
 ```
 ### Testbench for ROM
 ```
-module tb_rom_4x8;
-    reg [1:0] addr;
-    wire [7:0] data_out;
+`timescale 1ns/1ps
+module tb_rom_4kb;
 
-    rom_4x8 uut(addr, data_out);
+reg [11:0] addr;
+wire [7:0] dout;
+integer i;
 
+rom_4kb dut (addr,dout);
+
+initial begin
+    addr = 0;
+    #10;
+    for (i = 0; i < 20; i = i + 1) begin
+        #10 addr = i;
+    end
+    #20 $finish;
+end
+endmodule
   
 ```
 ### Simulation Output for ROM
