@@ -130,76 +130,122 @@ endmodule
   
 ```
 ### Simulation Output for ROM
-*
-*
-*
-*
-Paste the output here
-*
-*
+
+<img width="1205" height="747" alt="Screenshot 2025-11-05 172353" src="https://github.com/user-attachments/assets/b937a289-a774-46b3-a15f-5a07a50e88d6" />
+
 
 
 ### 3. FIFO Memory Module
 ```
 // 4x8 FIFO Memory with Read and Write Operations
-module fifo_4x8 (
-    input clk, reset, wr_en, rd_en,
-    input [7:0] data_in,
-    output reg [7:0] data_out,
-    output reg full, empty
-);
-    reg [7:0] fifo_mem [3:0];
-    reg [1:0] wr_ptr, rd_ptr;
-    reg [2:0] count;
+module fifo(clk,rst,wr_en,rd_en,data_in,full,data_out,empty,count);
+   input clk;
+   input rst;
+   input wr_en;
+   input [7:0] data_in;
+   input rd_en;
+   output reg full;
+   output reg [7:0] data_out;
+   output reg empty;
+   output reg [4:0] count;
 
-    always @(posedge clk or posedge reset) begin
-        if (reset) begin
-            wr_ptr <= 0;
-            rd_ptr <= 0;
-            count <= 0;
-            full <= 0;
-            empty <= 1;
-        end
-        else begin
-            // Write operation
-            if (wr_en && !full) begin
-                fifo_mem[wr_ptr] <= data_in;
-                wr_ptr <= wr_ptr + 1;
-                count <= count + 1;
-         
-    end
+   reg [7:0] mem [0:15];
+   reg [3:0] wr_ptr;
+   reg [3:0] rd_ptr;
+
+always @(posedge clk) 
+  begin
+       if (rst) 
+         begin
+           wr_ptr   <= 0;
+           rd_ptr   <= 0;
+           count    <= 0;
+           data_out <= 0;
+           full     <= 0;
+           empty    <= 1;
+         end 
+     else 
+       begin
+           full  <= (count == 16);
+           empty <= (count == 0);
+if (wr_en && !full) 
+    begin
+           mem[wr_ptr] <= data_in;
+           wr_ptr <= wr_ptr + 1'b1;
+     end
+
+ if (rd_en && !empty) 
+     begin
+               data_out <= mem[rd_ptr];
+               rd_ptr <= rd_ptr + 1'b1;
+     end
+
+case ({wr_en && !full, rd_en && !empty})
+               2'b10: count <= count + 1'b1;
+               2'b01: count <= count - 1'b1;
+               default: count <= count;
+endcase
+           full  <= (count == 16);
+           empty <= (count == 0);
+       end
+   end
 endmodule
 ```
 ### Testbench for FIFO
 ```
-module tb_fifo_4x8;
-    reg clk, reset, wr_en, rd_en;
-    reg [7:0] data_in;
-    wire [7:0] data_out;
-    wire full, empty;
+`timescale 1ns/1ps
+module fifo_tb;
+   reg clk;
+   reg rst;
+   reg wr_en;
+   reg rd_en;
+   reg [7:0] data_in;
+   wire [7:0] data_out;
+   wire full;
+   wire empty;
+   wire [4:0] count;
 
-    fifo_4x8 uut(clk, reset, wr_en, rd_en, data_in, data_out, full, empty);
+  fifo uut (clk,rst,wr_en,rd_en,data_in,full,data_out,empty,count );
+  
+   always #5 clk = ~clk;
+   initial 
+    begin
+       clk = 0;
+       rst = 1;
+       wr_en = 0;
+       rd_en = 0;
+       data_in = 8'h00;            
+       rst = 0;                          
+       rst = 1;                          
+       rst = 0;                         
 
-    always #5 clk = ~clk;
+ repeat (5) 
+    begin
+           @(posedge clk);
+           wr_en = 1;
+           data_in = data_in + 1;
+    end
+       @(posedge clk);
+       wr_en = 0;
 
-    initial begin
-        clk = 0; reset = 1; wr_en = 0; rd_en = 0; data_in = 8'h00;
-        #10 reset = 0;
+       repeat (3) 
+         begin
+           @(posedge clk);
+           rd_en = 1;
+       end
+       @(posedge clk);
+       rd_en = 0;
+#20;
+       $finish;
+   end
 
-        // Write data
-        wr_en = 1; data_in = 8'h11; #10;
-        data_in = 8'h22; #10;
-        
 endmodule
 ```
 ### Simulation Output for FIFO
-*
-*
-*
-*
-Paste the output here
-*
-*
+
+<img width="1209" height="747" alt="Screenshot 2025-11-05 172419" src="https://github.com/user-attachments/assets/838455ec-f46c-486f-8f1b-2cc35fe66608" />
+
+
 ### Result
 
 The RAM, ROM, and FIFO memory modules were successfully designed, simulated, and verified using Verilog HDL in Vivado Design Suite.
